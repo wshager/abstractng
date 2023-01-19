@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "downlevelIteration": true,
+    "target": "es2015",
+    "module": "esnext",
+    "lib": ["esnext", "dom"],
+    "moduleResolution": "node",
+    "inlineSourceMap": true,
+    "inlineSources": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "removeComments": false,
+    "noImplicitAny": false,
+    "suppressImplicitAnyIndexErrors": true,
+    "baseUrl": ".",
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "esModuleInterop": true,
+    "paths": {},
+    "rootDir": ".",
+    "typeRoots": ["node_modules/@types"]
+  },
+  "exclude": ["node_modules", "tmp"],
+  "lib": ["es2016", "dom"]
+}
