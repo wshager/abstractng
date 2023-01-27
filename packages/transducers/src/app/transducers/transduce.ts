@@ -1,9 +1,13 @@
-export const transduce = (value, fn, generator, init) => {
+export const transduce = (value, fn, generator, init?) => {
   const source = generator(value);
   let cur = source.next();
-  do {
+  if (init === undefined) {
+    init = cur.value;
+    cur = source.next();
+  }
+  while (!cur.done) {
     init = fn(init, cur.value);
     cur = source.next();
-  } while (!cur.done);
+  }
   return init;
 };
