@@ -21,7 +21,7 @@ export function transduceEither<E, A>(input: Either<E, A>): Either<E, A> {
   const isIpek = (a: string) => a === 'ipek';
   const hello = compose(filter(isIpek), map(prependHello));
 
-  const xform = hello(either.map);
+  const xform = hello(either.replaceRight);
 
   return transduce(input, xform, either.generator, input);
 }

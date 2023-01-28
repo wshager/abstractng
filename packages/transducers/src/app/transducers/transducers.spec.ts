@@ -36,14 +36,14 @@ describe('Transducers', () => {
       const result = transduceEither(either.right('ipek'));
 
       expect(either.isRight(result)).toBeTruthy();
-      expect(either.fold(identity, identity)(result)).toBe('hello ipek');
+      expect(either.getOrElse(identity)(result)).toBe('hello ipek');
     });
 
     it('should NOT return a right either with value "hello ipek"', () => {
       const result = transduceEither(either.left('error'));
 
       expect(either.isRight(result)).toBeFalsy();
-      expect(either.fold(identity, identity)(result)).toBe('error');
+      expect(either.getOrElse(identity)(result)).toBe('error');
     });
   });
 });
