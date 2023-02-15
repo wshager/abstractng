@@ -1,2 +1,2 @@
 export * from './generator';
-export * from './replace-right';
+export * from './concat';

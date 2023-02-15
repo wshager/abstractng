@@ -11,3 +11,17 @@ export const transduce = (value, fn, generator, init?) => {
   }
   return init;
 };
+
+export const transducePush = (value, fn, next, error, complete, init) => {
+  next(
+    value,
+    (cur) => {
+      init = fn(init, cur);
+    },
+    (err) => {
+      error(err);
+    },
+    complete
+  );
+  return init;
+};
