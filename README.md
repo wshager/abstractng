@@ -34,11 +34,11 @@ However, when dealing with large arrays chaining multiple methods can become a p
 
 To improve the performance there we could of course stop using `filter` and `map`. There are imperative ways to prevent the additional iterations. However, it's also possible to use a single built-in array method: `reduce`. Moreover, `reduce` can be seen as underlying all other operations that can be done on an array or any "container" type, as we'll see later on.
 
-> Using functional instead of imperative programming has many benefits, such as predictability and transparent typing.
+> 🦉 Using functional instead of imperative programming has many benefits, such as predictability and transparent typing. See for instance [this article on Coding Dojo](https://www.codingdojo.com/blog/what-is-functional-programming).
 
 How does `reduce` work again? It takes an operator function and an initial value. The operator function takes an accumulated value, the current item in the array and the index of that item.
 
-> In the case of transforming from array to array that initial value is always an empty array.
+> 🦉 In the case of transforming from array to array that initial value is always an empty array.
 
 ```javascript
 const input = [1, 2, 3, 4, 5, 6];
@@ -77,7 +77,7 @@ console.log(result); // [4, 8, 12]
 
 The above example applies to arrays, but what if we want to extend it to other types at some point? We need a way to get values from the array that is generic enough as to apply it to container types. One such pattern is the [generator function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function*). To write a generator function for any array is straightforward enough. Only when we want to add types we need to use generics, since the array can contain any type.
 
-> Generics is a way to create an interface that can work with a variety of types, while still constraining it more that with using `any`. Instead one or more "type parameters" are expected. See [the page on Generics in the TypeScript handbook](https://www.typescriptlang.org/docs/handbook/2/generics.html).
+> 🦉 Generics is a way to create an interface that can work with a variety of types, while still constraining it more that with using `any`. Instead one or more "type parameters" are expected. See [the page on Generics in the TypeScript handbook](https://www.typescriptlang.org/docs/handbook/2/generics.html).
 
 ```javascript
 function* arrayGenerator<T>(arr: T[]) {
@@ -129,7 +129,7 @@ A nice typed functional framework is [fp-ts](https://gcanti.github.io/fp-ts/). I
 
 We need to come up with similar procedures we created for the array version. The generator needs to yield the value in `Right`. There's a function `fold` we can use that is like `reduce`. It takes two arguments, a function that operates on the `Left` value and one that operates on the `Right`. Since we just want to get the value unmodified we can use `identity`, which simply returns whatever was passed in. We don't care about the `Left` value here since it will never be operated on.
 
-> The [`identity` function](https://en.wikipedia.org/wiki/Identity_function) is at the bases of functional programming as it expresses a relationship between things mathematically. It's used to prove several laws in e.g. logic and set theory.
+> 🦉 The [`identity` function](https://en.wikipedia.org/wiki/Identity_function) is at the bases of functional programming as it expresses a relationship between things mathematically. It's used to prove several laws in e.g. logic and set theory.
 
 ```javascript
 function* eitherGenerator<E, A>(input: Either<E, A>) {
