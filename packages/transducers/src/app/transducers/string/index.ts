@@ -1,1 +1,1 @@
-export * from './concat';
+export * from './monoid';

@@ -50,7 +50,7 @@ console.log(result); // [4, 8, 12]
 
 The above example shows how `reduce` can be used to both filter and transform items in an array. The downside of this code is that it's harder to read, because it doesn't distinguish between the `filter` part and the `map` part of the operation.
 
-Is there a way to improve that? It turns out there is. A pattern was introduced in Clojure that was called [transducers](https://cognitect.com/blog/2014/8/6/transducers-are-coming) and soon found it's way into JavaScript.
+Is there a way to improve that? It turns out there is. A pattern was introduced in Clojure that was called [transducers](https://cognitect.com/blog/2014/8/6/transducers-are-coming) and soon found its way into JavaScript.
 
 In transducers, function composition is used to create a single operation that can be passed to a `reduce` function. See the below code snipped from [Eric Elliot's nice writeup on transducers](https://medium.com/javascript-scene/transducers-efficient-data-processing-pipelines-in-javascript-7985330fe73d).
 
@@ -75,7 +75,7 @@ console.log(result); // [4, 8, 12]
 
 #### Mechanically pulled 🐥
 
-The above example applies to arrays, but what if we want to extend it to other types at some point? We need a way to get values from the array that is generic enough as to apply it to container types. One such pattern is the [generator function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function*). To write a generator function for any array is straightforward enough. Only when we want to add types we need to use generics, since the array can contain any type.
+The above example applies to arrays, but what if we want to extend it to other types at some point? We need a way to get values from the array that is generic enough as to apply it to container types. One such pattern is the [generator function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function*). To write a generator function for any array is straightforward enough. Only, when we want to add types we need to use generics, since the array can contain any type.
 
 > 🦉 Generics is a way to create an interface that can work with a variety of types, while still constraining it more that with using `any`. Instead one or more "type parameters" are expected. See [the page on Generics in the TypeScript handbook](https://www.typescriptlang.org/docs/handbook/2/generics.html).
 
@@ -115,11 +115,11 @@ This concludes the first day 😎
 
 ### Day 2
 
-That's all good and nice, but wait just one moment! I'm already using [RxJS](https://rxjs.dev/) (or [Lodash](https://lodash.com/) or your framework here) and I'm already using composable operator functions!
+That's all good and nice, but wait just one moment! I'm already using [RxJS](https://rxjs.dev/) (or [Lodash](https://lodash.com/) or your framework here) and it already provides composable operator functions!
 
 #### You Ain't Gonna Need It?
 
-You would be right of course, and getting invested in yet another new framework for that extra bit of performance might not be worth it. However, do you need separate frameworks if there would be a single one to do all you need? Does it even exist? At first glance [transducers-js](https://github.com/cognitect-labs/transducers-js) looks great, but the first thing you might notice is that it's pretty old and doesn't use TypeScript. And of course we want typed functions.
+You would be right of course, and getting invested in yet another new framework for that extra bit of performance might not be worth it. However, do you need separate frameworks if there would be a single one to do all you need? Does it even exist? At first glance [transducers-js](https://github.com/cognitect-labs/transducers-js) looks great, but the first thing you might notice is that it hasn't been updated recently and doesn't use TypeScript. And of course we want typed functions.
 
 A nice typed functional framework is [fp-ts](https://gcanti.github.io/fp-ts/). It's also quite complex, due to its abstract nature (if not its scarce documentation). Let's see if we can familiarize ourselves with it by implementing transducers for `Either`.
 
@@ -147,11 +147,11 @@ const eitherConcat = <E, A>(a: Either<E, A>, c: A) => map(() => c)(a);
 
 #### No beginning no end
 
-Something tricky comes up when dealing with the initial `Either` to pass in. We only need to operate on `Right`, but when `Left` is passed as initial value and the input is `Right` we always end up with `Left`. However, if the initial value is `Right` and the input is `Left` then the initial value is never updated and we end up with `Left`. Hmm.
+Something tricky comes up when dealing with the initial `Either` to pass in. We only need to operate on `Right`, but when `Left` is passed as initial value and the input is `Right` we always end up with `Left`. However, if the initial value is `Right` and the input is `Left` then the initial value is never updated and we end up with `Right`, which is wrong. Hmm.
 
 And what if we *don't* pass an initial value? Then `Right` is taken as the initial value and is never operated on. Hmm hmm. Fixed by passing the input as the initial value. Nice.
 
-Finally let's appreciate just silly this exercise is.
+Finally let's appreciate just how silly this exercise is.
 
 ```javascript
 const prependHello = (a: string) => `hello ${a}`;
@@ -163,3 +163,10 @@ const result = transduce(input, xform, eitherGenerator, input);
 console.log(isRight(result)); // true
 console.log(toUnion(result)); // hello world
 ```
+
+### Day 3
+
+
+- improvements?
+- string / iterator
+- async / promise

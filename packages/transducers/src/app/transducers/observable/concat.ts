@@ -1,4 +1,4 @@
 export const concat = (a, c) => {
-  a.push(c);
+  a.next(c);
   return a;
 };

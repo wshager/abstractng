@@ -1,12 +1,11 @@
 import { either } from 'fp-ts';
-import { identity } from 'fp-ts/lib/function';
-import { array } from '.';
-import { filter } from './filter';
-import { map } from './map';
+import { from, toArray } from 'rxjs';
+import { array, map, filter } from '.';
 import {
   transduceArray,
   transduceArrayPush,
   transduceEither,
+  transduceObservable,
   transducePromise,
   transduceString,
 } from './transducers';
@@ -39,7 +38,7 @@ describe('Transducers', () => {
     });
 
     it('should map', () => {
-      const f = map((cur) => cur + 1)(array.concat);
+      const f = map((cur) => cur + 1)(array.monoid.concat);
       const result = [1, 2, 3].reduce(f, []);
 
       expect(result).toEqual([2, 3, 4]);
@@ -73,14 +72,14 @@ describe('Transducers', () => {
       const result = transduceEither(either.right('world'));
 
       expect(either.isRight(result)).toBeTruthy();
-      expect(either.getOrElse(identity)(result)).toBe('hello world');
+      expect(either.toUnion(result)).toBe('hello world');
     });
 
     it('should NOT return a right either with value "hello world"', () => {
       const result = transduceEither(either.left('error'));
 
       expect(either.isRight(result)).toBeFalsy();
-      expect(either.getOrElse(identity)(result)).toBe('error');
+      expect(either.toUnion(result)).toBe('error');
     });
   });
 
@@ -113,13 +112,29 @@ describe('Transducers', () => {
 
       expect(await result).toBe('hello world');
     });
+
+    it('should return a reject promise', () => {
+      const result = transducePromise(Promise.reject('err'));
+
+      expect(result).rejects.toBeTruthy();
+    });
   });
 
   describe('Transduce string', () => {
     it('should return hello w', () => {
-      const result = transduceString('wouter');
+      const result = transduceString('world');
 
       expect(result).toEqual('hello w');
+    });
+  });
+
+  describe('Transduce observable', () => {
+    it('should emit 4, 8, 12', () => {
+      const result = transduceObservable(from([1, 2, 3, 4, 5, 6]));
+
+      result.pipe(toArray()).subscribe((arr) => {
+        expect(arr).toEqual([4, 8, 12]);
+      });
     });
   });
 });

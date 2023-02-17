@@ -1,2 +1,1 @@
-export * from './concat';
-export * from './generator';
+export * from './monoid';
