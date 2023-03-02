@@ -24,7 +24,7 @@
 
 Sometimes you have an array that you need filter before you can transform the items. We usually do this with the built-in methods of `filter` and `map`.
 
-```javascript
+```js
 const input = [1, 2, 3, 4, 5, 6];
 const result = input.filter(c => c % 2 === 0).map(c => c * 2);
 console.log(result); // [4, 8, 12]
@@ -40,7 +40,7 @@ How does `reduce` work again? It takes an operator function and an initial value
 
 > 🦉 In the case of transforming from array to array that initial value is always an empty array.
 
-```javascript
+```js
 const input = [1, 2, 3, 4, 5, 6];
 const result = input.reduce((a, c) => c % 2 === 0 ? a.concat([c * 2]) : a, []);
 console.log(result); // [4, 8, 12]
@@ -54,18 +54,13 @@ Is there a way to improve that? It turns out there is. A pattern was introduced 
 
 In transducers, function composition is used to create a single operation that can be passed to a `reduce` function. See the below code snipped from [Eric Elliot's nice writeup on transducers](https://medium.com/javascript-scene/transducers-efficient-data-processing-pipelines-in-javascript-7985330fe73d).
 
-```javascript
+```js
 const compose = (...fns) => x => fns.reduceRight((y, f) => f(y), x);
-const map = f => step =>
-  (a, c) => step(a, f(c));
-const filter = predicate => step =>
-  (a, c) => predicate(c) ? step(a, c) : a;
+const map = f => step => (a, c) => step(a, f(c));
+const filter = predicate => step => (a, c) => predicate(c) ? step(a, c) : a;
 const isEven = n => n % 2 === 0;
 const double = n => n * 2;
-const doubleEvens = compose(
-  filter(isEven),
-  map(double)
-);
+const doubleEvens = compose(filter(isEven), map(double));
 const arrayConcat = (a, c) => a.concat([c]);
 const xform = doubleEvens(arrayConcat);
 const input = [1, 2, 3, 4, 5, 6];
@@ -73,13 +68,15 @@ const result = input.reduce(xform, []);
 console.log(result); // [4, 8, 12]
 ```
 
+> 🦉 Note that new code snippets may use functions already defined.
+
 #### Mechanically pulled 🐥
 
 The above example applies to arrays, but what if we want to extend it to other types at some point? We need a way to get values from the array that is generic enough as to apply it to container types. One such pattern is the [generator function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function*). To write a generator function for any array is straightforward enough. Only, when we want to add types we need to use generics, since the array can contain any type.
 
 > 🦉 Generics is a way to create an interface that can work with a variety of types, while still constraining it more that with using `any`. Instead one or more "type parameters" are expected. See [the page on Generics in the TypeScript handbook](https://www.typescriptlang.org/docs/handbook/2/generics.html).
 
-```javascript
+```js
 function* arrayGenerator<T>(arr: T[]) {
   for(const x of arr) yield x;
 }
@@ -87,9 +84,9 @@ function* arrayGenerator<T>(arr: T[]) {
 
 Then we create a `transduce` function that is similar to `reduce`, but takes the generator as input. A `reduce` function iterates over some container and applies the function with the initial value and the current value. The initial value will be accumulated with each iteration and returned at the end.
 
-```javascript
-function transduce(value, fn, generator, init) {
-  const source = generator(value);
+```js
+function transduce(input, fn, generator, init) {
+  const source = generator(input);
   let cur = source.next();
   do {
     init = fn(init, cur.value);
@@ -101,10 +98,7 @@ function transduce(value, fn, generator, init) {
 
 Finally we pass the arguments to the `transduce` function. There are of course other ways to achieve the same and this is just a first step in a process to get to a more generic function.
 
-```javascript
-const isEven = (n) => n % 2 === 0;
-const double = (n) => n * 2;
-const doubleEvens = compose(filter(isEven), map(double));
+```js
 const xform = doubleEvens(arrayConcat);
 const input = [1, 2, 3, 4, 5, 6];
 const result = transduce(input, xform, arrayGenerator, []);
@@ -125,13 +119,15 @@ A nice typed functional framework is [fp-ts](https://gcanti.github.io/fp-ts/). I
 
 #### `Right` is right but `Left` is wrong
 
-`Either` is a union type that indicates either failure or success in the most general sense. When successfull the type is an instance of `Right` containing an arbitrary value. In case there was a failure for whatever reason (e.g. a runtime error) it's an instance of `Left`. It can be used to shortcut operation in an operation pipeline: as soon as there is a `Left` in the pipeline there are no more operations possible and processing will stop. The value in `Left` may contain useful information about what went wrong.
+`Either` is a union type that indicates either failure or success in the most general sense. When successfull the type is an instance of `Right` containing an arbitrary value. In case there was a failure for whatever reason it's an instance of `Left`.
+
+> 🦉 `Either` can be used to shortcut operation in an operation pipeline: as soon as there is a `Left` in the pipeline there are no more operations possible and processing will stop. The value in `Left` may contain useful information about what went wrong. In JavaScript it may represent a runtime error, but that's an imperative construct and has no equivalent in math or logic.
 
 We need to come up with similar procedures we created for the array version. The generator needs to yield the value in `Right`. There's a function `fold` we can use that is like `reduce`. It takes two arguments, a function that operates on the `Left` value and one that operates on the `Right`. Since we just want to get the value unmodified we can use `identity`, which simply returns whatever was passed in. We don't care about the `Left` value here since it will never be operated on.
 
 > 🦉 The [`identity` function](https://en.wikipedia.org/wiki/Identity_function) is at the bases of functional programming as it expresses a relationship between things mathematically. It's used to prove several laws in e.g. logic and set theory.
 
-```javascript
+```js
 function* eitherGenerator<E, A>(input: Either<E, A>) {
   yield fold(identity, identity)(input);
 }
@@ -141,7 +137,7 @@ The `concat` function might look a bit more tricky, but we only need to replace 
 
 By this time you may realise this is a bit of a silly and contrived example. Oh well, as long as it helps to understand both `Either` and `transduce` better, right? Left 🤓
 
-```javascript
+```js
 const eitherConcat = <E, A>(a: Either<E, A>, c: A) => map(() => c)(a);
 ```
 
@@ -153,7 +149,7 @@ And what if we *don't* pass an initial value? Then `Right` is taken as the initi
 
 Finally let's appreciate just how silly this exercise is.
 
-```javascript
+```js
 const prependHello = (a: string) => `hello ${a}`;
 const isWorld = (a: string) => a === 'world';
 const hello = compose(filter(isWorld), map(prependHello));
@@ -166,7 +162,195 @@ console.log(toUnion(result)); // hello world
 
 ### Day 3
 
+Perhaps it's good to look at what was created so far and see if there's anything to improve. The code in the repo was written in a test-driven way from a data perspective, but operators and helpers remain untested at [this point](./commit/cf0305d266ff17a101bff397101f1c2431455f64). Also, not all code is typed. This might become a concern if this would be a open source library with actual users, but it isn't, so just consider adding more tests and types a good exercise at generics 😀
 
-- improvements?
-- string / iterator
-- async / promise
+#### I don't like to use alien terms but 👽
+
+It isn't easy for me either, but we have to talk about polymorphism. We've created implementations for transducing arrays and eithers, but we're not anywhere close to dealing with observables, which is one of the aims of this project.
+
+> 🦉 Polymorphism means there's a single interface that can be used for different types. In functional programming, functions that accept different types have a generic type signature. For instance, the `identity` function above has the TypeScript type `<A>(input: A) => A`, where `A` is any type. Also note that operators in JavaScript are often polymorphic: the `+` operator can be used on both numbers and strings. This is known as operator overloading.
+
+Generics in TypeScript can become hard to read at some point and it also has some limitations for annotating the kind of functions we'll be using. This is resolved by using the `fp-ts` library, but coming from JavaScript means we'll need to build a small spaceship to be able to travel to that remote planet...
+
+So, before we go down the rabbit hole of async or fly to planet Abstract we'll need to get a better grasp of polymorphism. Let's first look at another sync type. Below is an example to `transduce` a string. While usually considered as a primitive type, we can of course consider a string as a "container" of characters 🤨
+
+```js
+const isW = (a: string) => a === 'w';
+const hello = compose(filter(isW), map(prependHello));
+function* stringGenerator(s: string) {
+  for(const c of s) yield s;
+}
+const stringConcat = (a, c) => a + c;
+const result = transduce(input, stringConcat, stringGenerator, '');
+console.log(result); // hello w
+```
+
+#### Seeing double? 😵
+
+Wasn't that easy? All you need is to translate the generator and concat function to string equivalents. But, wait a minute:
+
+```js
+function* arrayGenerator<T>(arr: T[]) {
+  for(const x of arr) yield x;
+}
+function* stringGenerator(s: string) {
+  for(const c of s) yield s;
+}
+```
+
+Yes, the generator functions are identical. That's because in JavaScript the `for...of` statement operates on [iterable objects](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols). So, for any object that implements the iterable protocol we can instead retrieve the iterator:
+
+```js
+function iterator<T>(iterable: Iterable<T>) {
+  return iterable[Symbol.iterator]();
+}
+```
+
+> 🦉 In some functional languages, such as Haskell, polymorphism is expressed through type classes. Type classes are like generic interfaces that define behaviour which is shared between types. In JavaScript the built-in `Iterable` can also be considered a type class: it defines the iterator behaviour for iterable objects. See the TypeScript definition below.
+
+```js
+interface Iterable<T> {
+  [Symbol.iterator](): Iterator<T>;
+}
+```
+
+We can pass a generic function to `transduce`, getting one step closer to making a function that can handle a pretty wide range of types: any type that implements the iterator protocol can make use of a single function to loop over its inner values. This isn't limited to the built-in types, as we can extend or create any class in JavaScript.
+
+```js
+transduce(input, someConcat, iterator, someInit);
+```
+
+At this point we could make the iterator part of the `transduce` internals and thus have it only accept types that implement the iterable interface. However, we would still need to pass the `concat` and `init` arguments. As we will see later there is a way to generalise this, but there's a bit more ground to cover. Instead we first move on to async.
+
+#### Worried about the future?
+
+How to get from the present to the asynchronous? When dealing with [promises](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Using_promises) you could be tempted by the fact that we now have [async generators](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/AsyncGenerator) in JavaScript. However, when we allow async generators in the `transduce` function it means that we would need to `await` every iteration. This would seriously impact the performance of the synchronous usecase, which is not desirable.
+
+What can we do instead of awaiting when dealing with promises? Since the arrival of [async/await](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/async_function) in 2017 we use it a lot less, but a promise is still an object with a `then` method, which receives a *callback*. Callbacks used to be the main way of dealing with async for a long time, and we'll need to get reacquainted with them here.
+
+To `transduce` a promise without a generator we'll have to adapt the original function:
+
+```js
+function transduce(input, fn, onNext, init) {
+  onNext(input, (cur) => {
+    init = fn(init, cur);
+  });
+  return init;
+};
+```
+
+Instead of working with a generator we just call a function that will kick off processing the value(s) which are gathered from the input. In the case of a promise that is the resolved value (we'll deal with rejection later). The function to pass in becomes:
+
+```js
+function promiseOnNext<T>(p: Promise<T>, callback: (val: T) => void) {
+  return p.then(callback);
+}
+```
+
+When the callback happens the function call will update `init`, which will be used for the sync case: when the overwrite of `init` happens asynchronously, it will be ignored (and garbage collected). We have a working solution for getting the resolved value, but how do we "update" the initial value (like `concat`), which is again a promise? We would need to be able to resolve a promise "from the outside". Luckily there exists a pattern that allows for just that: `Deferred`.
+
+> 🦉 A deferred promise exposes a `resolve` (and `reject`) method in addition to `then` (and `catch`). It was a popular pattern before promises were standardised in JavaScript, but is now considered an anti-pattern.
+
+```js
+interface Deferred<T> extends Promise<T> {
+  resolve: (v: T) => void;
+  reject: (err: any) => void;
+}
+
+function createDeferred<T>() {
+  let resolve, reject;
+  const deferred = new Promise<T>((rs, rj) => {
+    resolve = rs;
+    reject = rj;
+  }) as Deferred<T>;
+  deferred.resolve = resolve;
+  deferred.reject = reject;
+  return deferred;
+}
+```
+
+We pass the deferred as initial value to `transduce` and update it by simply calling its `resolve` method with the received value:
+
+```js
+function promiseConcat<T>(a: Promise<T>, c: T) {
+  a.resolve(c);
+  return a;
+}
+const xform = hello(promiseConcat);
+const result = transduce(Promise.resolve('world'), xform, promiseOnNext, createDeferred());
+console.log(await result); // hello world
+```
+
+What if we pass an rejection? Then the deferred should also be rejected. We need another callback for handling the error case, but we can combine it in the same function. We just need another function to dispatch on the initial value. Let's call it `onError`.
+
+```js
+function transduce(input, fn, onNext, onError, init) {
+  onNext(input, (cur) => {
+    init = fn(init, cur);
+  }, (error) => {
+    onError(init, error);
+  });
+  return init;
+};
+```
+
+Now to transduce a rejected promise:
+
+```js
+function promiseOnNext<T>(p: Promise<T>, nextCallback: (val: T) => void, errorCallback: (err: any) => void) {
+  return p.then(nextCallback).catch(errorCallback);
+}
+function promiseOnError<T>(a: Promise<T>, error: any) {
+  a.reject(error);
+}
+const xform = hello(promiseConcat);
+const result = transduce(Promise.reject('boom!'), xform, promiseOnNext, promiseOnError, createDeferred());
+result.catch(console.log); // boom!
+```
+
+Promises also have a `finally` method that always gets called after it's either resolved or rejected. However, there isn't any method to be called, so let's just pass a function that does nothing (`noop`).
+
+```js
+function transduce(input, fn, onNext, onError, onComplete, init) {
+  onNext(input, (cur) => {
+    init = fn(init, cur);
+  }, (error) => {
+    onError(init, error);
+  }, () => {
+    onComplete(init);
+  });
+  return init;
+};
+
+function promiseOnNext<T>(
+  p: Promise<T>,
+  nextCallback: (val: T) => void,
+  errorCallback: (err: any) => void,
+  completeCallback: () => void
+) {
+  return p.then(nextCallback).reject(errorCallback).finally(completeCallback);
+}
+function noop() {}
+const xform = hello(promiseConcat);
+const result = transduce(
+  Promise.resolve('world'),
+  xform,
+  promiseOnNext,
+  promiseOnError,
+  noop,
+  createDeferred()
+);
+
+result.finally(() => {
+  console.log('finally!');
+}); // finally!
+```
+
+Does the `onNext` pattern resemble anything you've seen before? Of course! Observables have identical methods and callbacks. Where promises have `resolve`, `reject` and `finally` observables have `next`, `error` and `complete`. It's the same concept, with of course the difference that observables "resolve" to multiple values. However, as soon as you are able to transduce async input, you get handling observables for free 👻
+
+Next up: observables!
+
+### Day 4
+
+- observables
+- applying polymorphism with type classes

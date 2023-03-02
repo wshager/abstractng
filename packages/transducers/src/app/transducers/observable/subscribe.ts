@@ -1,1 +1,1 @@
-export const subscribe = (o) => o.subscribe.bind(o);
+export const subscribe = (o) => o.subscribe;

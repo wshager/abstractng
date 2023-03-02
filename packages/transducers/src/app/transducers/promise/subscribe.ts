@@ -1,3 +1,3 @@
-export function subscribe(p, { next, error, complete }) {
+export function subscribe<T>(p: Promise<T>, { next, error, complete }) {
   p.then(next).catch(error).finally(complete);
 }

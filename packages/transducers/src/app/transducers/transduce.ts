@@ -26,8 +26,12 @@ export const transducePush = (value, fn) => {
     next: (cur) => {
       init = xform(init, cur);
     },
-    error,
-    complete,
+    error: (err) => {
+      error(init, err);
+    },
+    complete: () => {
+      complete(init);
+    },
   });
   return init;
 };
@@ -36,22 +40,25 @@ function getDefaults(value) {
   if (Symbol.iterator in value) {
     return getIterableDefaults(value);
   }
-  let subscribe,
-    concat,
-    empty,
-    error,
-    complete = noop;
+  let subscribe, concat, empty, error, complete;
   if (value instanceof Promise) {
     subscribe = promise.subscribe;
     concat = promise.monoid.concat;
     empty = promise.monoid.empty;
-    error = empty.reject;
+    error = (a, err) => {
+      a.reject(err);
+    };
+    complete = noop;
   } else if (value instanceof Observable) {
     subscribe = observable.subscribe;
     concat = observable.monoid.concat;
     empty = observable.monoid.empty;
-    error = empty.error;
-    complete = empty.complete;
+    error = (a, err) => {
+      a.error(err);
+    };
+    complete = (a) => {
+      a.complete();
+    };
   }
   return { subscribe, concat, empty, error, complete };
 }
