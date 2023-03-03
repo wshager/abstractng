@@ -4,7 +4,7 @@ import * as either from './either';
 import { iterator } from './iterable/iterator';
 
 export const transduceArray = (input: number[], fn) =>
-  transduce(input, fn(array.monoid.concat), iterator, []);
+  transduce(input, fn(array.monoid.concat), iterator, array.monoid.empty);
 
 export const transduceEither = <E, A>(input: Either<E, A>, fn): Either<E, A> =>
   transduce(input, fn(either.concat), either.generator, input);
@@ -13,7 +13,12 @@ export const transducePromise = <T>(input: Promise<T>, fn) =>
   transducePush(input, fn);
 
 export const transduceString = (input: string, fn) => {
-  return transduce(input, fn(string.monoid.concat), iterator, '');
+  return transduce(
+    input,
+    fn(string.monoid.concat),
+    iterator,
+    string.monoid.concat
+  );
 };
 
 export const transduceArrayPush = (input: number[], fn) =>
