@@ -394,7 +394,7 @@ function observableSubscribe<T>(o: Observable<T>, s: Observer<T>) {
 Just like the `Promise` case needed a `Deferred`, the `Observable` case needs an initial value that allows for "updates from the outside". In `RxJS` this typically is a `Subject`, which exposes methods `next`, `error`, parallel to `resolve` and `reject`. It also has a `complete` method, because since an observable "resolve" many values it can complete at any time. When a `Subject` is passed as initial value, the handlers can simply dispatch on it:
 
 ```js
-function observableConcat<T>(a: Promise<T>, c: T) {
+function observableConcat<T>(a: Observable<T>, c: T) {
   a.next(c);
   return a;
 }
@@ -474,7 +474,7 @@ function transduceObservable<T>(input: Observable<T>, fn) {
     fn(observable.getMonoid<T>().concat),
     observableSubscribe,
     observableOnError,
-    observableComplete,
+    observableOnComplete,
     observable.getMonoid<T>().empty
   );
 }

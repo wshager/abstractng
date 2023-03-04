@@ -1,4 +1,4 @@
-import { noop, Observable } from 'rxjs';
+import { isObservable, noop } from 'rxjs';
 import { array, iterable, observable, promise, string } from '.';
 
 export const transduce = (value, fn, generator, init?) => {
@@ -15,16 +15,18 @@ export const transduce = (value, fn, generator, init?) => {
   return init;
 };
 
-export const transducePush = (value, fn) => {
+export const transducePush = (value, fn, init?) => {
   const { subscribe, concat, empty, error, complete } = getDefaults(value);
-  let init = empty;
+  if (init == null) {
+    init = empty;
+    fn = fn(concat);
+  }
   if (!subscribe || !concat) {
     throw new Error('Cannot transduce type');
   }
-  const xform = fn(concat);
   subscribe(value, {
     next: (cur) => {
-      init = xform(init, cur);
+      init = fn(init, cur);
     },
     error: (err) => {
       error(init, err);
@@ -36,31 +38,28 @@ export const transducePush = (value, fn) => {
   return init;
 };
 
+const isObject = (object: unknown): object is Record<string, unknown> =>
+  !!object && (typeof object === 'object' || typeof object === 'function');
+
+const isPromise = (object: unknown): object is Promise<unknown> =>
+  object instanceof Promise ||
+  (isObject(object) &&
+    typeof object.then === 'function' &&
+    typeof object.catch === 'function');
+
+const isIterable = (object: unknown): object is Iterable<unknown> =>
+  isObject(object) && Symbol.iterator in object;
+
 function getDefaults(value) {
-  if (Symbol.iterator in value) {
+  if (isIterable(value)) {
     return getIterableDefaults(value);
   }
-  let subscribe, concat, empty, error, complete;
-  if (value instanceof Promise) {
-    subscribe = promise.subscribe;
-    concat = promise.monoid.concat;
-    empty = promise.monoid.empty;
-    error = (a, err) => {
-      a.reject(err);
-    };
-    complete = noop;
-  } else if (value instanceof Observable) {
-    subscribe = observable.subscribe;
-    concat = observable.monoid.concat;
-    empty = observable.monoid.empty;
-    error = (a, err) => {
-      a.error(err);
-    };
-    complete = (a) => {
-      a.complete();
-    };
+  if (isPromise(value)) {
+    return getPromiseDefaults();
   }
-  return { subscribe, concat, empty, error, complete };
+  if (isObservable(value)) {
+    return getObservableDefaults();
+  }
 }
 
 function getIterableDefaults(value) {
@@ -77,3 +76,23 @@ function getIterableDefaults(value) {
   }
   return { subscribe, concat, empty, error, complete };
 }
+
+const getPromiseDefaults = () => ({
+  subscribe: promise.subscribe,
+  concat: promise.monoid.concat,
+  empty: promise.monoid.empty,
+  error: promise.onError,
+  complete: noop,
+});
+
+const getObservableDefaults = () => ({
+  subscribe: observable.subscribe,
+  concat: observable.monoid.concat,
+  empty: observable.monoid.empty,
+  error: (a, err) => {
+    a.error(err);
+  },
+  complete: (a) => {
+    a.complete();
+  },
+});

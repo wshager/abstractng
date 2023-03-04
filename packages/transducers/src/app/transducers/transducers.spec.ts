@@ -1,6 +1,17 @@
 import { either } from 'fp-ts';
 import { from, toArray } from 'rxjs';
-import { array, map, filter, compose } from '.';
+import {
+  array,
+  map,
+  filter,
+  compose,
+  merge,
+  transduce,
+  transducePush,
+  observable,
+  promise,
+} from '.';
+import { iterator } from './iterable';
 import {
   transduceArray,
   transduceArrayPush,
@@ -144,6 +155,53 @@ describe('Transducers', () => {
       result.pipe(toArray()).subscribe((arr) => {
         expect(arr).toEqual([4, 8, 12]);
       });
+    });
+  });
+
+  describe('Mergemap', () => {
+    it('should merge arrays', () => {
+      const result = [
+        [1, 2, 3],
+        [4, 5, 6],
+      ].reduce(
+        merge()((a, c) => a.concat([c])),
+        []
+      );
+
+      expect(result).toEqual([1, 2, 3, 4, 5, 6]);
+    });
+
+    it('should mergeMap', () => {
+      const mergeMap = (f) => compose(map(f), merge());
+      const xform = compose(mergeMap((x) => [x, x * 2]))(array.monoid.concat);
+
+      const result = transduce([1, 2, 3], xform, iterator, array.monoid.empty);
+
+      expect(result).toEqual([1, 2, 2, 4, 3, 6]);
+    });
+  });
+
+  describe('Into', () => {
+    it('should convert array to observable', () => {
+      const result = transducePush(
+        [1, 2, 3],
+        observable.monoid.concat,
+        observable.monoid.empty
+      );
+
+      result.pipe(toArray()).subscribe((a) => {
+        expect(a).toEqual([1, 2, 3]);
+      });
+    });
+
+    it('should convert array to promise', async () => {
+      const result = transducePush(
+        [1, 2, 3],
+        promise.monoid.concat,
+        promise.monoid.empty
+      );
+
+      expect(await result).toBe(1);
     });
   });
 });

@@ -17,7 +17,7 @@ export const transduceString = (input: string, fn) => {
     input,
     fn(string.monoid.concat),
     iterator,
-    string.monoid.concat
+    string.monoid.empty
   );
 };
 
