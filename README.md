@@ -491,11 +491,25 @@ interface Monoid<A> extends Semigroup<A> {
   readonly empty: A
 }
 
-interface Subscribable<A> {
-  subscribe: <T>(a: A, o: Observer<T>) => void,
+interface Observer<T> {
+  next: (value: T) => void;
+  error: (err: any) => void;
+  complete: () => void;
 }
 
-interface Transducable<A> = Monoid<A> & Subscribable<A>;
+interface Transducable<A, B = A, T = unknown> extends Monoid<A> {
+  transduce(
+    input: A,
+    fn: (a: A, c: T) => A,
+    subscribe: (a: A, o: Observer<T>) => void,
+    onError: (a: A, err: unknown) => void,
+    onComplete: (a: A) => void,
+    init: B
+  );
+  subscribe: <T>(a: A, o: Observer<T>) => void;
+  onError: (a: A, err: unknown) => void;
+  onComplete: (a: A) => void;
+}
 ```
 
 There are some things to iron out, but Rome wasn't built in four days.

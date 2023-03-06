@@ -4,7 +4,5 @@ export * as string from './string';
 export * as iterable from './iterable';
 export * as observable from './observable';
 export * from './compose';
-export * from './filter';
-export * from './operators/map';
+export * from './operators';
 export * from './transduce';
-export * from './operators/merge';
