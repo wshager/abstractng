@@ -1,3 +1,3 @@
 import { Monoid } from 'fp-ts/lib/String';
 
-export const monoid = Monoid;
+export const getMonoid = () => Monoid;

@@ -1,5 +1,5 @@
 import { either } from 'fp-ts';
-import { from, toArray } from 'rxjs';
+import { asyncScheduler, from, of, toArray } from 'rxjs';
 import {
   array,
   map,
@@ -56,7 +56,7 @@ describe('Transducers', () => {
     });
 
     it('should map', () => {
-      const f = map((cur) => cur + 1)(array.monoid.concat);
+      const f = map((cur) => cur + 1)(array.getMonoid().concat);
       const result = [1, 2, 3].reduce(f, []);
 
       expect(result).toEqual([2, 3, 4]);
@@ -173,9 +173,16 @@ describe('Transducers', () => {
 
     it('should mergeMap', () => {
       const mergeMap = (f) => compose(map(f), merge());
-      const xform = compose(mergeMap((x) => [x, x * 2]))(array.monoid.concat);
+      const xform = compose(mergeMap((x) => [x, x * 2]))(
+        array.getMonoid().concat
+      );
 
-      const result = transduce([1, 2, 3], xform, iterator, array.monoid.empty);
+      const result = transduce(
+        [1, 2, 3],
+        xform,
+        iterator,
+        array.getMonoid().empty
+      );
 
       expect(result).toEqual([1, 2, 2, 4, 3, 6]);
     });
@@ -185,8 +192,8 @@ describe('Transducers', () => {
     it('should convert array to observable', () => {
       const result = transducePush(
         [1, 2, 3],
-        observable.monoid.concat,
-        observable.monoid.empty
+        observable.getMonoid().concat,
+        observable.getMonoid().empty
       );
 
       result.pipe(toArray()).subscribe((a) => {
@@ -197,11 +204,33 @@ describe('Transducers', () => {
     it('should convert array to promise', async () => {
       const result = transducePush(
         [1, 2, 3],
-        promise.monoid.concat,
-        promise.monoid.empty
+        promise.getMonoid().concat,
+        promise.getMonoid().empty
       );
 
       expect(await result).toBe(1);
+    });
+
+    it('should convert promise to array', () => {
+      transducePush(
+        Promise.resolve(2),
+        array.getMonoid().concat,
+        array.getMonoid().empty,
+        (arr) => {
+          expect(arr).toEqual([2]);
+        }
+      );
+    });
+
+    it('should convert observable to array', () => {
+      transducePush(
+        of(1, 2, 3, asyncScheduler),
+        array.getMonoid().concat,
+        array.getMonoid().empty,
+        (arr) => {
+          expect(arr).toEqual([1, 2, 3]);
+        }
+      );
     });
   });
 });
