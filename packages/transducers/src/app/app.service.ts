@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { compose, filter, map } from './transducers';
-import { transduceArray } from './transducers/transducers';
+import { transduceArray } from './transducers/array';
 
 @Injectable()
 export class AppService {

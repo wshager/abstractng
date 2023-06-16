@@ -17,6 +17,7 @@
 - https://xgrommx.github.io/rx-book/content/getting_started_with_rxjs/creating_and_querying_observable_sequences/transducers.html
 - https://staltz.com/why-we-need-callbags.html
 - https://www.youtube.com/watch?v=sTSQlYX5DU0
+- https://ybogomolov.me/01-higher-kinded-types
 
 ## Covered so far
 
@@ -26,7 +27,7 @@
 
 Sometimes you have an array that you need filter before you can transform the items. We usually do this with the built-in methods of `filter` and `map`.
 
-```js
+```ts
 const input = [1, 2, 3, 4, 5, 6];
 const result = input.filter(c => c % 2 === 0).map(c => c * 2);
 console.log(result); // [4, 8, 12]
@@ -42,7 +43,7 @@ How does `reduce` work again? It takes an operator function and an initial value
 
 > 🦉 In the case of transforming from array to array that initial value is always an empty array.
 
-```js
+```ts
 const input = [1, 2, 3, 4, 5, 6];
 const result = input.reduce((a, c) => c % 2 === 0 ? a.concat([c * 2]) : a, []);
 console.log(result); // [4, 8, 12]
@@ -56,7 +57,7 @@ Is there a way to improve that? It turns out there is. A pattern was introduced 
 
 In transducers, function composition is used to create a single operation that can be passed to a `reduce` function. See the below code snipped from [Eric Elliot's nice writeup on transducers](https://medium.com/javascript-scene/transducers-efficient-data-processing-pipelines-in-javascript-7985330fe73d).
 
-```js
+```ts
 const compose = (...fns) => x => fns.reduceRight((y, f) => f(y), x);
 const map = f => step => (a, c) => step(a, f(c));
 const filter = predicate => step => (a, c) => predicate(c) ? step(a, c) : a;
@@ -78,7 +79,7 @@ The above example applies to arrays, but what if we want to extend it to other t
 
 > 🦉 Generics is a way to create an interface that can work with a variety of types, while still constraining it more that with using `any`. Instead one or more "type parameters" are expected. See [the page on Generics in the TypeScript handbook](https://www.typescriptlang.org/docs/handbook/2/generics.html).
 
-```js
+```ts
 function* arrayGenerator<T>(arr: T[]) {
   for(const x of arr) yield x;
 }
@@ -86,7 +87,7 @@ function* arrayGenerator<T>(arr: T[]) {
 
 Then we create a `transduce` function that is similar to `reduce`, but takes the generator as input. A `reduce` function iterates over some container and applies the function with the initial value and the current value. The initial value will be accumulated with each iteration and returned at the end.
 
-```js
+```ts
 function transduce(input, fn, generator, init) {
   const source = generator(input);
   let cur = source.next();
@@ -100,7 +101,7 @@ function transduce(input, fn, generator, init) {
 
 Finally we pass the arguments to the `transduce` function. There are of course other ways to achieve the same and this is just a first step in a process to get to a more generic function.
 
-```js
+```ts
 const xform = doubleEvens(arrayConcat);
 const input = [1, 2, 3, 4, 5, 6];
 const result = transduce(input, xform, arrayGenerator, []);
@@ -129,7 +130,7 @@ We need to come up with similar procedures we created for the array version. The
 
 > 🦉 The [`identity` function](https://en.wikipedia.org/wiki/Identity_function) is at the bases of functional programming as it expresses a relationship between things mathematically. It's used to prove several laws in e.g. logic and set theory.
 
-```js
+```ts
 function* eitherGenerator<E, A>(input: Either<E, A>) {
   yield fold(identity, identity)(input);
 }
@@ -139,7 +140,7 @@ The `concat` function might look a bit more tricky, but we only need to replace 
 
 By this time you may realise this is a bit of a silly and contrived example. Oh well, as long as it helps to understand both `Either` and `transduce` better, right? Left 🤓
 
-```js
+```ts
 const eitherConcat = <E, A>(a: Either<E, A>, c: A) => map(() => c)(a);
 ```
 
@@ -151,7 +152,7 @@ And what if we *don't* pass an initial value? Then `Right` is taken as the initi
 
 Finally let's appreciate just how silly this exercise is.
 
-```js
+```ts
 const prependHello = (a: string) => `hello ${a}`;
 const isWorld = (a: string) => a === 'world';
 const hello = compose(filter(isWorld), map(prependHello));
@@ -176,7 +177,7 @@ Generics in TypeScript can become hard to read at some point and it also has som
 
 So, before we go down the rabbit hole of async or fly to planet Abstract we'll need to get a better grasp of polymorphism. Let's first look at another sync type. Below is an example to `transduce` a string. While usually considered as a primitive type, we can of course consider a string as a "container" of characters 🤨
 
-```js
+```ts
 const isW = (a: string) => a === 'w';
 const hello = compose(filter(isW), map(prependHello));
 function* stringGenerator(s: string) {
@@ -191,7 +192,7 @@ console.log(result); // hello w
 
 Wasn't that easy? All you need is to translate the generator and concat function to string equivalents. But, wait a minute:
 
-```js
+```ts
 function* arrayGenerator<T>(arr: T[]) {
   for(const x of arr) yield x;
 }
@@ -202,7 +203,7 @@ function* stringGenerator(s: string) {
 
 Yes, the generator functions are identical. That's because in JavaScript the `for...of` statement operates on [iterable objects](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols). So, for any object that implements the iterable protocol we can instead retrieve the iterator:
 
-```js
+```ts
 function iterator<T>(iterable: Iterable<T>) {
   return iterable[Symbol.iterator]();
 }
@@ -210,7 +211,7 @@ function iterator<T>(iterable: Iterable<T>) {
 
 > 🦉 In some functional languages, such as Haskell, polymorphism is expressed through type classes. Type classes are like generic interfaces that define behaviour which is shared between types. In JavaScript the built-in `Iterable` can also be considered a type class: it defines the iterator behaviour for iterable objects. See the TypeScript definition below.
 
-```js
+```ts
 interface Iterable<T> {
   [Symbol.iterator](): Iterator<T>;
 }
@@ -218,7 +219,7 @@ interface Iterable<T> {
 
 We can pass a generic function to `transduce`, getting one step closer to making a function that can handle a pretty wide range of types: any type that implements the iterator protocol can make use of a single function to loop over its inner values. This isn't limited to the built-in types, as we can extend or create any class in JavaScript.
 
-```js
+```ts
 transduce(input, someConcat, iterator, someInit);
 ```
 
@@ -232,7 +233,7 @@ What can we do instead of awaiting when dealing with promises? Since the arrival
 
 To `transduce` a promise without a generator we'll have to adapt the original function:
 
-```js
+```ts
 function transduce(input, fn, onNext, init) {
   onNext(input, (cur) => {
     init = fn(init, cur);
@@ -243,7 +244,7 @@ function transduce(input, fn, onNext, init) {
 
 Instead of working with a generator we just call a function that will kick off processing the value(s) which are gathered from the input. In the case of a promise that is the resolved value (we'll deal with rejection later). The function to pass in becomes:
 
-```js
+```ts
 function promiseOnNext<T>(p: Promise<T>, callback: (val: T) => void) {
   return p.then(callback);
 }
@@ -253,7 +254,7 @@ When the callback happens the function call will update `init`, which will be us
 
 > 🦉 A deferred promise exposes a `resolve` (and `reject`) method in addition to `then` (and `catch`). It was a popular pattern before promises were standardised in JavaScript, but is now considered an anti-pattern.
 
-```js
+```ts
 interface Deferred<T> extends Promise<T> {
   resolve: (v: T) => void;
   reject: (err: any) => void;
@@ -273,7 +274,7 @@ function createDeferred<T>() {
 
 We pass the deferred as initial value to `transduce` and update it by simply calling its `resolve` method with the received value:
 
-```js
+```ts
 function promiseConcat<T>(a: Promise<T>, c: T) {
   a.resolve(c);
   return a;
@@ -285,7 +286,7 @@ console.log(await result); // hello world
 
 What if we pass an rejection? Then the deferred should also be rejected. We need another callback for handling the error case, but we can combine it in the same function. We just need another function to dispatch on the initial value. Let's call it `onError`.
 
-```js
+```ts
 function transduce(input, fn, onNext, onError, init) {
   onNext(input, (cur) => {
     init = fn(init, cur);
@@ -298,7 +299,7 @@ function transduce(input, fn, onNext, onError, init) {
 
 Now to transduce a rejected promise:
 
-```js
+```ts
 function promiseOnNext<T>(p: Promise<T>, nextCallback: (val: T) => void, errorCallback: (err: any) => void) {
   return p.then(nextCallback).catch(errorCallback);
 }
@@ -312,7 +313,7 @@ result.catch(console.log); // boom!
 
 Promises also have a `finally` method that always gets called after it's either resolved or rejected. However, there isn't any method to be called, so let's just pass a function that does nothing (`noop`).
 
-```js
+```ts
 function transduce(input, fn, onNext, onError, onComplete, init) {
   onNext(input, (cur) => {
     init = fn(init, cur);
@@ -362,7 +363,7 @@ Now we have modified `transduce` to handle async it's time to figure out how it 
 
 First we need to pass the `onNext` function which kicks off the callback chain. In `RxJs` this is called `subscribe` instead, so let's rename the parameter and the callbacks to be more in line with `RxJs`:
 
-```js
+```ts
 function transduce(input, fn, subscribe, onError, onComplete, init) {
   subscribe(input, {
     next: (cur) => {
@@ -383,7 +384,7 @@ function transduce(input, fn, subscribe, onError, onComplete, init) {
 
 The `subscribe` function for `Observable` is simply a way to dispatch the `subscribe` method on the object (perhaps it would have been nicer if `RxJs` would already expose this function, but it doesn't seem so). Note that this function returns `void`. At some point we might need to come back to the return value, because we may have to unsubscribe from the observable.
 
-```js
+```ts
 function observableSubscribe<T>(o: Observable<T>, s: Observer<T>) {
   o.subscribe(s);
 }
@@ -393,7 +394,7 @@ function observableSubscribe<T>(o: Observable<T>, s: Observer<T>) {
 
 Just like the `Promise` case needed a `Deferred`, the `Observable` case needs an initial value that allows for "updates from the outside". In `RxJS` this typically is a `Subject`, which exposes methods `next`, `error`, parallel to `resolve` and `reject`. It also has a `complete` method, because since an observable "resolve" many values it can complete at any time. When a `Subject` is passed as initial value, the handlers can simply dispatch on it:
 
-```js
+```ts
 function observableConcat<T>(a: Observable<T>, c: T) {
   a.next(c);
   return a;
@@ -408,7 +409,7 @@ function observableOnComplete<T>(a: Observable<T>) {
 
 Finally we can transduce observables.
 
-```js
+```ts
 const xform = doubleEvens(observableConcat);
 const result = transduceObservable(
   from([1, 2, 3, 4, 5, 6]),
@@ -433,7 +434,7 @@ However, this road was created as a gentle introduction into higher and higher l
 
 Not all implementations in `fp-ts` are similar (e.g. there is no `Monoid` for `Array<unknown>`), so this repo re-exposes `Monoid` to be readily used in the transducer functions. We already implemented `Monoid` behaviour for promises and observables, but we'll expose it using correct type.
 
-```js
+```ts
 function transduceArray<T>(input: T[], fn) {
   return transduce(
     input,
@@ -482,7 +483,8 @@ function transduceObservable<T>(input: Observable<T>, fn) {
 
 All that is needed now is a type class that expresses the `subscribe`, `onError` and `onComplete` behaviour (if any) and we can have a stab at creating the input type for `transduce`:
 
-```js
+```ts
+// required typeclasses for the types implementing `transduce`
 interface Semigroup<A> {
   readonly concat: (x: A, y: A) => A
 }
@@ -497,7 +499,19 @@ interface Observer<T> {
   complete: () => void;
 }
 
-interface Transducable<A, B = A, T = unknown> extends Monoid<A> {
+interface Subscribable<A> {
+  subscribe: <T>(a: A, o: Observer<T>) => void;
+}
+
+interface Failable<A> {
+  onError: (a: A, err: unknown) => void;
+}
+
+interface Completable<A> {
+  onComplete: (a: A) => void;
+}
+
+interface Transducable<A, B = A, T = unknown> {
   transduce(
     input: A,
     fn: (a: A, c: T) => A,
@@ -506,10 +520,121 @@ interface Transducable<A, B = A, T = unknown> extends Monoid<A> {
     onComplete: (a: A) => void,
     init: B
   );
-  subscribe: <T>(a: A, o: Observer<T>) => void;
-  onError: (a: A, err: unknown) => void;
-  onComplete: (a: A) => void;
 }
 ```
 
 There are some things to iron out, but Rome wasn't built in four days.
+
+### Day 5
+
+It's time to add more operators. We already have `map`, but what if the mapping function returns another "container" value, like an array or observable?
+
+> 🦉 In RxJS some operators like `switchMap`, `concatMap`, or `mergeMap` will expect a "project" function that returns an observable (or promise or array), but what happens then? First `map` is applied with the project function and after that the result is "flattened". In other words: when the returned (inner) observables emit, the mapped (outer) observable emits those values instead. Since RxJs streams have a specific async behaviour the flattening process takes concurrency into account: `mergeMap` will flatten inner observables whenever they complete, regardless of the order, but `concatMap` will preserve the order of the outer observable. Finally, `switchMap` will flatten only the most recent inner observable, discarding all previous results from the project function.
+
+How did `mergeMap` work again? We use it often when the result returned from the `project` function and we're interested in all the values.
+
+```ts
+const pause = (ms: number) => new Promise((resolve) => {
+  setTimeout(() => {
+    resolve(ms);
+  }, ms);
+});
+const result = of(1, 2, 3).pipe(mergeMap((n: number) => pause(n * 100)));
+result.subscribe(console.log); // 100, 200, 300
+```
+
+> 🦉 Flattening of arrays was introduced in ES2019 and follows the exact same pattern of many existing implementations and languages. Methods `flatten` and `flatMap` were added to the Array prototype.
+
+#### And then this happened
+
+Let's first look at the array example. To `flatMap` we need to first provide a function to `map` that returns an array and then flatten the result, so... wait, what? It already did? Uh oh.
+
+```ts
+const monoidArray = array.getMonoid<number>();
+const result = transduce(
+  [1, 2, 3],
+  compose(map((x) => [x, x * 2]))(monoidArray.concat),
+  iterator,
+  monoidArray.empty
+);
+console.log(result); // [1, 2, 2, 4, 3, 6]
+```
+
+The skilled reader already discovered that `concat` has a different type than is actually used. For arrays the JavaScript implementation will accept both arrays (or array-like values) and other values: in case the value isn't an array it will be appended. To be honest, `Monoid` was mainly introduced to explain typeclasses, so we'll need to iron this detail out now.
+
+> 🦉 To add a single item at the end of a list in Haskell (where typeclasses originated) one actually has to use the monoidal concat operation and provide a new list with a single item as the second argument. The size of lists isn't dynamic like that of JavaScript arrays, so the performance for adding a single item is similar to concatenating arrays. In general, merging iterables by iterating seems to be preferred approach in functional programming.
+
+#### Higher and kind
+
+As you see we need a `transduce` function that is truly polymorphic, that is, it has to contain knowledge about which type is passed in and use the correct instances of `Monoid`, `Subscribable`, `Failable` and `Completable` when that type is encountered. However, since we already know which implementations these type classes need we can compose them in several ways. All that is needed is to infer the type of transducable at runtime and decide which implementations to use. Ideally, this selection process is configurable, something like
+
+```ts
+(a, previousTransduce) => Array.isArray(a) ? transduceArray(a) : previousTransduce(a);
+```
+
+However, before we do let's consider the true type of `transduce`.
+
+> "A higher-kinded type is a type that abstracts over some type that, in turn, abstracts over another type."
+
+When reading a sentence like that most people brains usually stop processing half way. Those people need something concrete to see the abstract, if at all. Let's look at the type of `Functor` in `fp-ts`.
+
+```ts
+export interface Functor<F> {
+  readonly URI: F
+  readonly map: <A, B>(fa: HKT<F, A>, f: (a: A) => B) => HKT<F, B>
+}
+```
+
+No bullet point with owl here. We should be used to these alien names by now. It's just a type class that defines the `map` behaviour (i.e. "mappable" types). However, the type signature of map contains an even more alien thing: the three-letter acronym of `HKT`, AKA higher-kinded type. And what's with the `URI` in this interface? See the following snippets adapted from [Intro to fp-ts, part 1: Higher-Kinded Types
+](https://ybogomolov.me/01-higher-kinded-types). See the article for a more in-depth explanation.
+
+```ts
+interface Functor<F> {
+  readonly map: <A, B>(f: (a: A) => B) => (as: F<A>) => F<B>; // Type 'F' is not generic. ts(2315)
+}
+```
+
+The subtype of `F`, which is the mappable type, can't be expressed in this way in TypeScript. The type arguments need to be *defunctionalized*, which means that `F` needs to be replaced by some unique identifier and wrapped with the `Kind` type constructor, which expresses *any* type constructor in a generic way. The `Kind` constructor, however, has a fixed arity (that is the number of type arguments the type constructor can take). Addtionally, the relation between the unique type identifier and the polymorphic type will be encoded in a dictionary:
+
+```ts
+interface URItoKind<A> {
+  'Array': Array<A>;
+} // a dictionary for 1-arity types: Array, Set, Tree, Promise, Maybe, Task...
+interface URItoKind2<A, B> {
+  'Map': Map<A, B>;
+} // a dictionary for 2-arity types: Map, Either, Bifunctor...
+
+type URIS = keyof URItoKind<any>; // sum type of names of all 1-arity types
+type URIS2 = keyof URItoKind2<any, any>; // sum type of names of all 2-arity types
+// and so on, as you desire
+
+type Kind<URI extends URIS, A> = URItoKind<A>[URI];
+type Kind2<URI extends URIS2, E, A> = URItoKind2<E, A>[URI];
+
+// and so on
+```
+
+Now the interface we want can be expressed (for a fixed arity).
+
+```ts
+export interface Functor1<F extends URIS> {
+  readonly URI: F
+  readonly map: <A, B>(fa: Kind<F, A>, f: (a: A) => B) => Kind<F, B>
+}
+
+export interface Functor2<F extends URIS2> {
+  readonly URI: F
+  readonly map: <E, A, B>(fa: Kind2<F, E, A>, f: (a: A) => B) => Kind2<F, E, B>
+}
+```
+
+Finally we need one more level of abstraction to express all available type arities.
+
+```ts
+interface HKT<URI, A> {
+  readonly _URI: URI
+  readonly _A: A
+}
+```
+
+This is the most abstract things can get in JavaScript and perhaps the value is debatable. However, abstraction is like a mountain that can be climbed time and again to gain a clear and calming view when stuck in the daily toil of software development. Living on that altitude is not for everyone, but look at all those tiny houses below in the valley...
